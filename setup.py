@@ -11,8 +11,13 @@ setup(
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         (f"share/{package_name}", ["package.xml"]),
         (f"share/{package_name}", glob("launch/*.launch.py")),
+        (f"share/{package_name}/resource", ["resource/smiling_face.bmp"]),
     ],
-    install_requires=["setuptools"],
+    install_requires=[
+        "setuptools",
+        "ament_index_python",
+        "sensor_msgs",
+    ],
     zip_safe=True,
     maintainer="lexmaister",
     maintainer_email="lexmaister@gmail.com",
@@ -20,6 +25,8 @@ setup(
     license="MIT",
     tests_require=["pytest"],
     entry_points={
-        "console_scripts": [f"field_node = {package_name}.field_node:main"],
+        "console_scripts": [
+            f"field_publisher = {package_name}.field_publisher_node:main"
+        ],
     },
 )
