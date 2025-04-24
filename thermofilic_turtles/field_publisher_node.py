@@ -8,6 +8,7 @@ import rclpy
 from rclpy.node import Node
 from ament_index_python.packages import get_package_share_directory
 from sensor_msgs.msg import Image
+from rcl_interfaces.msg import SetParametersResult
 
 
 pkg_name = "thermofilic_turtles"
@@ -85,13 +86,15 @@ class FieldPubliserNode(Node):
             parameters=[
                 ("img_file", "smiling_face.bmp"),
                 ("timer_period", 1.0),
-                ("noise_stddev", 10.0),
+                ("noise_stddev", 10),
             ],
         )
 
         img_file = self.get_parameter("img_file").value
         timer_period = self.get_parameter("timer_period").value
         self.noise_stddev = self.get_parameter("noise_stddev").value
+
+        self.add_on_set_parameters_callback(self.param_callback)
 
         img_path = os.path.join(pkg_share, "resource", img_file)
         self.get_logger().info(f"Loading field img from: {img_path!r}")
@@ -106,6 +109,32 @@ class FieldPubliserNode(Node):
         # Timer to publish periodically
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.get_logger().info(f"Field Publisher Node is ready")
+
+    def param_callback(self, params):
+        """Handle dynamic parameter updates."""
+        successful = True
+        for param in params:
+            if param.name == "noise_stddev" and param.type_ == param.Type.INTEGER:
+                self.noise_stddev = param.value
+                self.get_logger().info(f"noise_stddev updated to {self.noise_stddev}")
+            elif param.name == "img_file" and param.type_ == param.Type.STRING:
+                # Attempt to reload image
+                try:
+                    img_path = os.path.join(pkg_share, "resource", param.value)
+                    self.img = load_bmp_image(img_path)
+                    self.get_logger().info(f"Reloaded image: {param.value}")
+                except Exception as e:
+                    self.get_logger().error(f"Failed to load {param.value}: {e}")
+                    successful = False
+            elif param.name == "timer_period" and param.type_ == param.Type.DOUBLE:
+                try:
+                    self.timer.cancel()
+                    self.timer = self.create_timer(param.value, self.timer_callback)
+                    self.get_logger().info(f"Timer period updated to {param.value}")
+                except Exception as e:
+                    self.get_logger().error(f"Failed to update timer period: {e}")
+                    successful = False
+        return SetParametersResult(successful=successful)
 
     def timer_callback(self):
         """Publish field info as image"""
