@@ -26,7 +26,9 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            f"field_publisher = {package_name}.field_publisher_node:main"
+            f"field_publisher = {package_name}.field_publisher_node:main",
+            f"ctrl_ready_node = {package_name}.ctrl_ready_node:main",
+            f"kinesis_ctrl_node = {package_name}.kinesis_ctrl_node:main",
         ],
     },
 )

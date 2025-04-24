@@ -104,7 +104,7 @@ class FieldPubliserNode(Node):
         )
 
         # Publisher - temp field
-        self.field_pub = self.create_publisher(Image, f"temp_field", 10)
+        self.field_pub = self.create_publisher(Image, "temp_field", 10)
 
         # Timer to publish periodically
         self.timer = self.create_timer(timer_period, self.timer_callback)

@@ -3,8 +3,7 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Empty
-
-from thermofilic_turtle.srv import GetTempByCoord
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy
 
 
 class ControllersReady(Node):
@@ -18,7 +17,12 @@ class ControllersReady(Node):
             f"Controllers Ready Node has been started - waiting for {self.turtles_count} turtles"
         )
         self.ctrls_ready = 0
-        self.create_subscription(Empty, "ctrl_ready", self.check_ready_callback, 10)
+        qos_profile = QoSProfile(
+            depth=1, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
+        )
+        self.create_subscription(
+            Empty, "ctrl_ready", self.check_ready_callback, qos_profile
+        )
 
     def check_ready_callback(self, msg):
         """Callback function for checking if all turtles are ready."""

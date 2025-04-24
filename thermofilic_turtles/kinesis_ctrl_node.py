@@ -7,8 +7,8 @@ from rclpy.node import Node
 from turtlesim.msg import Pose
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Empty
-
-from thermofilic_turtle.srv import GetTempByCoord
+from sensor_msgs.msg import Image
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy
 
 
 class KinesisController(Node):
@@ -23,7 +23,6 @@ class KinesisController(Node):
                 ("linear_vel_max", 3.0),
                 ("angular_vel_min", 0.2),
                 ("angular_vel_max", 3.14 / 2),
-                ("timer_frequency", 10),  # Hz
             ],
         )
 
@@ -32,58 +31,74 @@ class KinesisController(Node):
         self.linear_vel_max = self.get_parameter("linear_vel_max").value
         self.angular_vel_min = self.get_parameter("angular_vel_min").value
         self.angular_vel_max = self.get_parameter("angular_vel_max").value
-        self.timer_frequency = self.get_parameter("timer_frequency").value
-
-        # Service client for temperature
-        self.temp_client = self.create_client(GetTempByCoord, "get_temp_by_coord")
-        while not self.temp_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info("Waiting for get_temp_by_coord service...")
-
-        # Publisher for cmd_vel
-        self.cmd_vel_pub = self.create_publisher(
-            Twist, f"turtle{self.turtle_num}/cmd_vel", 10
-        )
-
-        # Timer for movement and temperature requests
-        self.movement_timer = self.create_timer(
-            1.0 / self.timer_frequency,
-            self.timer_callback,
-        )
 
         self.moving = True  # if turtle isn't spawned yet
-        self.x = 0.0
-        self.y = 0.0
-        self._waiting_for_temp = False
-        self._temp_future = None
+        self.field_lut = []  # field lookup table
 
-        # while not self.temp_client.wait_for_service(timeout_sec=1.0):
-        #     self.get_logger().info("Waiting for get_temp_by_coord service...")
-
+        # Listeners
+        self.create_subscription(Image, "temp_field", self.field_callback, 10)
         self.create_subscription(
             Pose, f"turtle{self.turtle_num}/pose", self.pose_callback, 10
         )
 
+        # Publisher
+        self.cmd_vel_pub = self.create_publisher(
+            Twist, f"turtle{self.turtle_num}/cmd_vel", 10
+        )
+
         # Publish ready message
-        self.ready_pub = self.create_publisher(Empty, "ctrl_ready", 10)
+        qos_profile = QoSProfile(
+            depth=1, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
+        )
+        self.ready_pub = self.create_publisher(Empty, "ctrl_ready", qos_profile)
         self.ready_pub.publish(Empty())
         self.get_logger().info(
             f"Kinesis Controller Node #{self.turtle_num} is ready to go!"
         )
 
+    def field_callback(self, msg):
+        """Callback to handle new field info.
+
+        Updates self.field_lut lookup table
+        """
+        self.get_logger().info(
+            f"Got image: {msg.width}x{msg.height}, encoding={msg.encoding}, stamp={msg.header.stamp.sec}.{msg.header.stamp.nanosec}"
+        )
+
+        # Convert bytes to list of ints
+        if msg.encoding == "mono8":
+            # msg.data is a bytes object of length height*width (row-major order)
+            flat = list(msg.data)
+            height = msg.height
+            width = msg.width
+
+            # Reshape flat list into 2D list
+            self.field_lut = [flat[i * width : (i + 1) * width] for i in range(height)]
+
+            # Calculate mean value
+            total = sum(flat)
+            mean_val = total / (height * width) if height * width > 0 else 0
+
+            self.get_logger().info(f"Image mean={mean_val:.2f}")
+
+        else:
+            self.get_logger().warn(f"Unsupported encoding: {msg.encoding}")
+
     def pose_callback(self, msg):
-        """Callback for turtle pose."""
+        """Callback for turtle pose.
+
+        If turtle isn't moving - sends new velocity command to /cmd_vel topic
+        """
         moving_thresh = 0.001
         self.moving = (
             abs(msg.linear_velocity) > moving_thresh
             or abs(msg.angular_velocity) > moving_thresh
         )
-        self.x = msg.x
-        self.y = msg.y
+        x = msg.x
+        y = msg.y
 
-    def reset_waiting(self):
-        """Reset waiting for temperature."""
-        self._waiting_for_temp = False
-        self._temp_future = None
+        if self.moving or not self.field_lut:
+            return
 
     def timer_callback(self):
         """Main loop for kinesis controller."""
