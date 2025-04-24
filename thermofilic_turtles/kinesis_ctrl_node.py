@@ -18,7 +18,7 @@ class KinesisController(Node):
         self.declare_parameters(
             namespace="",
             parameters=[
-                ("turle_num", 1),
+                ("turtle_num", 1),
                 ("linear_vel_min", 0.2),
                 ("linear_vel_max", 3.0),
                 ("angular_vel_min", 0.2),
@@ -26,7 +26,7 @@ class KinesisController(Node):
             ],
         )
 
-        self.turtle_num = self.get_parameter("turle_num").value
+        self.turtle_num = self.get_parameter("turtle_num").value
         self.linear_vel_min = self.get_parameter("linear_vel_min").value
         self.linear_vel_max = self.get_parameter("linear_vel_max").value
         self.angular_vel_min = self.get_parameter("angular_vel_min").value
@@ -73,7 +73,9 @@ class KinesisController(Node):
             width = msg.width
 
             # Reshape flat list into 2D list
-            self.field_lut = [flat[i * width : (i + 1) * width] for i in range(height)]
+            self.field_lut = [
+                flat[i * width : (i + 1) * width] for i in range(height - 1, -1, -1)
+            ]
 
             # Calculate mean value
             total = sum(flat)
@@ -100,52 +102,36 @@ class KinesisController(Node):
         if self.moving or not self.field_lut:
             return
 
-    def timer_callback(self):
-        """Main loop for kinesis controller."""
-        if self.moving:
-            return
+        coords = [0, 0]
+        for i, coord in enumerate((x, y)):
+            coords[i] = int(round(coord, 1) * 10)
+            coords[i] = max(0, coords[i])
+            coords[i] = min(109, coords[i])
 
-        # Get temperature at current position
-        if self._waiting_for_temp and self._temp_future is not None:
-            # We got a response while waiting for the service
-            result = self._temp_future.result()
-            if result is None:
-                self.get_logger().warn("Temperature service call failed.")
-                self.reset_waiting()
-                return
+        temp = self.field_lut[coords[1]][coords[0]]
+        self.get_logger().debug(f"Temperature at point x={x:.1f}, y={y:.1f}: {temp}")
 
-            else:
-                temperature = result.temperature
-                self.reset_waiting()
-
-        else:
-            temp_req = GetTempByCoord.Request()
-            temp_req.x = self.x
-            temp_req.y = self.y
-            self._temp_future = self.temp_client.call_async(temp_req)
-            self._waiting_for_temp = True
-            return
-
-        # Map temperature to speed
-        temp = max(temperature, 0.01)
-        # linear velocity
-        linear = random.choice([-1, 1]) * min(
-            1 / temp * self.linear_vel_min, self.linear_vel_max
-        )
-        # angular velocity
-        angular = random.choice([-1, 1]) * (
-            min(1 / temp * self.angular_vel_min, self.angular_vel_max)
-        )
+        vels = {"linear_vel": 0, "angular_vel": 0}
+        for vel in ("linear_vel", "angular_vel"):
+            vel_raw = (
+                getattr(self, f"{vel}_min")
+                + (256 - temp)
+                * (getattr(self, f"{vel}_max") - getattr(self, f"{vel}_min"))
+                / 256
+            )
+            vels[vel] = random.choice([-1, 1]) * min(
+                vel_raw, getattr(self, f"{vel}_max")
+            )
 
         # Issue cmd_vel command
         twist = Twist()
-        twist.linear.x = linear
-        twist.angular.z = angular
+        twist.linear.x = vels["linear_vel"]
+        twist.angular.z = vels["angular_vel"]
         self.cmd_vel_pub.publish(twist)
         self.moving = True
         self.get_logger().info(
-            f"Position ({self.x:.2f},{self.y:.2f}) Temp={temperature:.3f} "
-            f"=> Linear={linear:.2f} Angular={angular:.2f}"
+            f"Position ({x:.1f},{y:.1f}) Temp={temp} "
+            f"=> Linear={vels['linear_vel']:.2f} Angular={vels['angular_vel']:.2f}"
         )
 
 
@@ -154,6 +140,8 @@ def main(args=None):
     node = KinesisController()
     try:
         rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
     finally:
         node.destroy_node()
         rclpy.shutdown()

@@ -11,12 +11,11 @@ setup(
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         (f"share/{package_name}", ["package.xml"]),
         (f"share/{package_name}", glob("launch/*.launch.py")),
-        (f"share/{package_name}/resource", ["resource/smiling_face.bmp"]),
+        (f"share/{package_name}/resource", glob("resource/*.bmp")),
     ],
     install_requires=[
         "setuptools",
         "ament_index_python",
-        "sensor_msgs",
     ],
     zip_safe=True,
     maintainer="lexmaister",
@@ -27,8 +26,9 @@ setup(
     entry_points={
         "console_scripts": [
             f"field_publisher = {package_name}.field_publisher_node:main",
-            f"ctrl_ready_node = {package_name}.ctrl_ready_node:main",
-            f"kinesis_ctrl_node = {package_name}.kinesis_ctrl_node:main",
+            f"ctrl_ready_checker = {package_name}.ctrl_ready_node:main",
+            f"kinesis_ctrl = {package_name}.kinesis_ctrl_node:main",
+            f"turtle_spawner = {package_name}.turtle_spawner_node:main",
         ],
     },
 )

@@ -14,23 +14,23 @@ PKG_NAME = "thermofilic_turtles"
 # === Parameters ===
 
 
-turtles_count = 10
+turtles_count = 75
 
 simulation_type: Literal["kinesis", "taxis"] = "kinesis"
 
 turtlesim_background_color = (210, 210, 210)
 
 field_params = [
-    {"img_file": "smiling_face.bmp"},
+    {"img_file": "smiling_face_blurred.bmp"},
     {"timer_period": 1.0},  # seconds
-    {"noise_stddev": 10},
+    {"noise_stddev": 5},
 ]
 
 movement_params = [
-    {"linear_vel_min": 0.2},
-    {"linear_vel_max": 2.0},
-    {"angular_vel_min": 0.2},
-    {"angular_vel_max": 3.14 / 2},
+    {"linear_vel_min": 0.1},
+    {"linear_vel_max": 1.0},
+    {"angular_vel_min": 0.1},
+    {"angular_vel_max": 3.14 / 4},
 ]
 
 ctrl_nodes_launch_delay = 0.5  # seconds
@@ -42,7 +42,7 @@ ctrl_nodes_launch_delay = 0.5  # seconds
 turtlesim_node = Node(
     package="turtlesim",
     executable="turtlesim_node",
-    name="sim",
+    name="turtlesim",
     parameters=[
         {
             "background_r": turtlesim_background_color[0],
@@ -62,24 +62,24 @@ field_publisher_node = Node(
 
 spawn_node = Node(
     package=PKG_NAME,
-    executable="turtle_spawner_node.py",
-    name="turtle_spawner",
+    executable="turtle_spawner",
+    name="spawner",
     parameters=[{"turtles_count": turtles_count}],
     output="screen",
 )
 
 ctrl_ready_node = Node(
     package=PKG_NAME,
-    executable="ctrl_ready_node",
+    executable="ctrl_ready_checker",
     name="ctrl_ready",
     parameters=[{"turtles_count": turtles_count}],
     output="screen",
 )
 
 
-clear_turtlesim = ExecuteProcess(
-    cmd=["ros2", "service", "call", "/clear", "std_srvs/srv/Empty"], output="screen"
-)
+# clear_turtlesim = ExecuteProcess(
+#     cmd=["ros2", "service", "call", "/clear", "std_srvs/srv/Empty"], output="screen"
+# )
 
 
 def generate_launch_description():
@@ -89,9 +89,9 @@ def generate_launch_description():
     for i in range(1, turtles_count + 1):
         ctrl_node = Node(
             package=PKG_NAME,
-            executable=f"{simulation_type}_ctrl_node",
+            executable=f"{simulation_type}_ctrl",
             name=f"{simulation_type}_ctrl_{i}",
-            parameters=[{"turle_num": i}] + movement_params,
+            parameters=[{"turtle_num": i}] + movement_params,
             output="screen",
         )
         ctrl_nodes.append(
@@ -105,29 +105,36 @@ def generate_launch_description():
         OnProcessStart(
             target_action=ctrl_ready_node,
             on_start=TimerAction(
-                period=ctrl_nodes_launch_delay,  # delay for activate ready listener
+                period=1.0,  # delay for activate ready listener
                 actions=ctrl_nodes,
             ),
         )
     )
 
-    # gradient_painter_chain = RegisterEventHandler(
-    #     OnProcessExit(
-    #         target_action=dummy_node,
-    #         on_exit=[gradient_painter_node],
-    #     )
-    # )
+    turtlesim_chain = RegisterEventHandler(
+        OnProcessExit(
+            target_action=ctrl_ready_node,
+            on_exit=[turtlesim_node],
+        )
+    )
 
-    # spawn_chain = RegisterEventHandler(
-    #     OnProcessExit(target_action=gradient_painter_node, on_exit=[spawn_node])
-    # )
+    spawn_chain = RegisterEventHandler(
+        OnProcessStart(
+            target_action=turtlesim_node,
+            on_start=[spawn_node],
+        )
+    )
+
+    field_chain = RegisterEventHandler(
+        OnProcessExit(target_action=spawn_node, on_exit=[field_publisher_node])
+    )
 
     return LaunchDescription(
         [
             ctrl_ready_node,
             ctrl_chain,
-            # turtlesim_node,
-            # gradient_painter_chain,
-            # spawn_chain,
+            turtlesim_chain,
+            spawn_chain,
+            field_chain,
         ]
     )

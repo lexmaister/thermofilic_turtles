@@ -32,7 +32,8 @@ class ControllersReady(Node):
         )
         if self.ctrls_ready == self.turtles_count:
             self.get_logger().info("All turtle's controllers are ready")
-            self.destroy_node()
+            # End spinning
+            raise SystemExit
 
 
 def main(args=None):
@@ -44,7 +45,10 @@ def main(args=None):
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
+    except SystemExit:
+        node.get_logger().info("Quitting Controllers Ready Node")
     finally:
+        node.destroy_node()
         rclpy.shutdown()
 
 
