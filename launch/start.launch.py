@@ -21,7 +21,7 @@ simulation_type: Literal["kinesis", "taxis"] = "kinesis"
 turtlesim_background_color = (210, 210, 210)
 
 field_params = [
-    {"img_file": "smiling_face_blurred.bmp"},
+    {"img_file": "smiling_face.bmp"},
     {"timer_period": 1.0},  # seconds
     {"noise_stddev": 5},
 ]
