@@ -12,8 +12,8 @@ from rclpy.qos import QoSProfile, QoSDurabilityPolicy
 
 
 class KinesisController(Node):
-    def __init__(self):
-        super().__init__("kinesis_controller")
+    def __init__(self, ctrl_type="kinesis"):
+        super().__init__(f"{ctrl_type}_controller")
 
         self.declare_parameters(
             namespace="",
@@ -53,7 +53,7 @@ class KinesisController(Node):
         self.ready_pub = self.create_publisher(Empty, "ctrl_ready", qos_profile)
         self.ready_pub.publish(Empty())
         self.get_logger().info(
-            f"Kinesis Controller Node #{self.turtle_num} is ready to go!"
+            f"{ctrl_type.capitalize()} Controller Node #{self.turtle_num} is ready to go!"
         )
 
     def field_callback(self, msg):

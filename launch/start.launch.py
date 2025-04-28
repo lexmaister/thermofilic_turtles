@@ -1,7 +1,12 @@
 from typing import Literal
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import RegisterEventHandler, TimerAction, ExecuteProcess
+from launch.actions import (
+    DeclareLaunchArgument,
+    RegisterEventHandler,
+    TimerAction,
+)
+from launch.substitutions import LaunchConfiguration
 from launch.event_handlers import OnProcessExit, OnProcessStart
 
 
@@ -20,8 +25,10 @@ simulation_type: Literal["kinesis", "taxis"] = "kinesis"
 
 turtlesim_background_color = (210, 210, 210)
 
+img_file: Literal["field_1", "field_2", "field_3", "smiling_face"] = "field_1"
+
 field_params = [
-    {"img_file": "smiling_face.bmp"},
+    {"img_file": f"{img_file}.bmp"},
     {"timer_period": 1.0},  # seconds
     {"noise_stddev": 5},
 ]
@@ -31,9 +38,16 @@ movement_params = [
     {"linear_vel_max": 1.0},
     {"angular_vel_min": 0.1},
     {"angular_vel_max": 3.14 / 4},
+    {"taxis_base": 0.2},
 ]
 
 ctrl_nodes_launch_delay = 0.5  # seconds
+
+
+# Declare a launch argument for the logging level.
+log_level_arg = DeclareLaunchArgument(
+    "log_level", default_value="INFO", description="Logging level for nodes"
+)
 
 
 # === Nodes ===
@@ -50,6 +64,8 @@ turtlesim_node = Node(
             "background_b": turtlesim_background_color[2],
         }
     ],
+    # Pass the logging level argument
+    arguments=["--ros-args", "--log-level", LaunchConfiguration("log_level")],
 )
 
 field_publisher_node = Node(
@@ -58,6 +74,7 @@ field_publisher_node = Node(
     name="field_pub",
     parameters=field_params,
     output="screen",
+    arguments=["--ros-args", "--log-level", LaunchConfiguration("log_level")],
 )
 
 spawn_node = Node(
@@ -66,6 +83,7 @@ spawn_node = Node(
     name="spawner",
     parameters=[{"turtles_count": turtles_count}],
     output="screen",
+    arguments=["--ros-args", "--log-level", LaunchConfiguration("log_level")],
 )
 
 ctrl_ready_node = Node(
@@ -74,12 +92,8 @@ ctrl_ready_node = Node(
     name="ctrl_ready",
     parameters=[{"turtles_count": turtles_count}],
     output="screen",
+    arguments=["--ros-args", "--log-level", LaunchConfiguration("log_level")],
 )
-
-
-# clear_turtlesim = ExecuteProcess(
-#     cmd=["ros2", "service", "call", "/clear", "std_srvs/srv/Empty"], output="screen"
-# )
 
 
 def generate_launch_description():
@@ -93,6 +107,7 @@ def generate_launch_description():
             name=f"{simulation_type}_ctrl_{i}",
             parameters=[{"turtle_num": i}] + movement_params,
             output="screen",
+            arguments=["--ros-args", "--log-level", LaunchConfiguration("log_level")],
         )
         ctrl_nodes.append(
             TimerAction(
@@ -131,6 +146,7 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+            log_level_arg,
             ctrl_ready_node,
             ctrl_chain,
             turtlesim_chain,

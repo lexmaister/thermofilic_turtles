@@ -6,9 +6,12 @@ A ROS2 package for simulating turtle behavior in a dynamic temperature field usi
 
 This package implements two motion behaviors influenced by temperature:
 - **Kinesis:** Variation in movement frequency or rate based on stimulus changes.
-- **Taxis:** Directional movement toward or away from a stimulus.
 
 ![Kinesis Behavior Diagram](docs/kinesis_behavior_diagram.png)
+
+- **Taxis:** Directional movement toward or away from a stimulus.
+
+![Taxis Behavior Diagram](docs/taxis_behavior_diagram.png)
 
 The simulation leverages ROS2 nodes, parameters, and launch configurations to model and visualize the behavior.
 
@@ -55,6 +58,15 @@ Launch the simulation after building and sourcing your workspace:
 ros2 launch thermofilic_turtles start.launch.py
 ```
 
+This command starts the turtlesim node and spawns turtle controller nodes based on the specified simulation type (kinesis or taxis). The turtles will move according to the temperature field generated from the specified BMP image.
+
+The turtlesim window will display the turtles moving in response to the temperature field, with their behavior determined by the selected controller type.
+
+It also available to set up logging level for nodes:
+```sh
+ros2 launch thermofilic_turtles start.launch.py log_level:=DEBUG
+```
+
 After launching the simulation, field parameters can be viewed and adjusted using rqt:
 - **Set Field Parameters:**  
   Use the `rqt` interface (e.g. `rqt_gui`) to view and modify field parameters at runtime if supported by your ROS2 parameter configuration.
@@ -84,8 +96,10 @@ The launch file (`start.launch.py`) provides configurable parameters:
   **Default:** `(210, 210, 210)`
 
 - **Field Parameters:**  
-  - `img_file`: BMP image file used to generate the temperature field.  
-    **Default:** `"smiling_face.bmp"`
+  - `img_file`: BMP image file used to generate the temperature field from `/resource` directory.
+    **Default:** `"field_1.bmp"`
+
+    ![Default Temperature Field](resource/field_1.bmp)
   - `timer_period`: Interval (in seconds) for updating the temperature field.  
     **Default:** `1.0`
   - `noise_stddev`: Standard deviation for noise applied to the field data.  

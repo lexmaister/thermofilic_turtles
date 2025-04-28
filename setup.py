@@ -28,6 +28,7 @@ setup(
             f"field_publisher = {package_name}.field_publisher_node:main",
             f"ctrl_ready_checker = {package_name}.ctrl_ready_node:main",
             f"kinesis_ctrl = {package_name}.kinesis_ctrl_node:main",
+            f"taxis_ctrl = {package_name}.taxis_ctrl_node:main",
             f"turtle_spawner = {package_name}.turtle_spawner_node:main",
         ],
     },
