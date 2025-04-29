@@ -66,7 +66,7 @@ class TaxisController(KinesisController):
         # Calculate temperature gradient
         temp_gradient = temp_outer - temp_center
         temp_gradient = (
-            temp_gradient if abs(temp_gradient) > 0.1 else random.uniform(-0.1, 0.1)
+            temp_gradient if abs(temp_gradient) > 0.1 else random.choice([-0.1, 0.1])
         )
         self.get_logger().debug(f"Temperature gradient: {temp_gradient:.1f}")
 
