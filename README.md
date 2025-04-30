@@ -7,11 +7,11 @@ A ROS2 package for simulating turtle behavior in a dynamic temperature field usi
 This package implements two motion behaviors influenced by temperature:
 - **Kinesis:** Variation in movement frequency or rate based on stimulus changes.
 
-![Kinesis Behavior Diagram](docs/kinesis_behavior_diagram.png)
+<img src="docs/kinesis_behavior_diagram.png" alt="Kinesis Behavior Diagram" width="600"/>
 
 - **Taxis:** Directional movement toward or away from a stimulus.
 
-![Taxis Behavior Diagram](docs/taxis_behavior_diagram.png)
+<img src="docs/taxis_behavior_diagram.png" alt="Taxis Behavior Diagram" width="600"/>
 
 The simulation leverages ROS2 nodes, parameters, and launch configurations to model and visualize the behavior.
 
@@ -79,6 +79,11 @@ After launching the simulation, field parameters can be viewed and adjusted usin
 
 ![Kinesis Simulation Example](docs/kinesis_behavior_example.png)
 
+### Nodes graph example
+The following diagram illustrates the nodes and their connections in the simulation with 5 turtles. The `field_node` updates the temperature field on a topic read by all turtle control nodes. Each control node checks if its turtle is moving; if not, it queries the current temperature and, using its behavior model, calculates a new target. The control node then sends velocity commands to the turtle.
+
+![Nodes Graph Example](docs/nodes_graph.png)
+
 ## Configuration
 
 The launch file (`start.launch.py`) provides configurable parameters:
@@ -121,6 +126,14 @@ The launch file (`start.launch.py`) provides configurable parameters:
   **Default:** `0.5` seconds
 
 Parameters can be modified directly within `start.launch.py` or overridden using ROS2 parameter mechanisms at runtime.
+
+## Behavior Models comparison test
+
+To compare behavior effectiveness, I measured how often turtles requested temperature readings in areas above 80% of the field's maximum temperature. The proportion of these requests, calculated for each behavior type, provides a clear metric for evaluating which movement pattern more efficiently guides turtles toward high-value zones.
+
+[FULL TEST RESULTS](docs/test_kinesis_vs_taxis.pdf) can be found in the `docs` directory.
+
+![TEST RESULTS IMG](docs/field_1_request_distrib.png)
 
 ## License
 
