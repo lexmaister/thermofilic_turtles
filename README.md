@@ -7,11 +7,11 @@ A ROS2 package for simulating turtle behavior in a dynamic temperature field usi
 This package implements two motion behaviors influenced by temperature:
 - **Kinesis:** Variation in movement frequency or rate based on stimulus changes.
 
-<img src="docs/kinesis_behavior_diagram.png" alt="Kinesis Behavior Diagram" width="600"/>
+<img src="docs/kinesis_behavior_diagram.png" alt="Kinesis Behavior Diagram" width="400"/>
 
 - **Taxis:** Directional movement toward or away from a stimulus.
 
-<img src="docs/taxis_behavior_diagram.png" alt="Taxis Behavior Diagram" width="600"/>
+<img src="docs/taxis_behavior_diagram.png" alt="Taxis Behavior Diagram" width="400"/>
 
 The simulation leverages ROS2 nodes, parameters, and launch configurations to model and visualize the behavior.
 
